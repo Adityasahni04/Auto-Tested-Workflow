@@ -1,27 +1,10 @@
-name: Run FastAPI Tests
+name: CI/CD Pipeline
 
-on:
-  push:
-    branches:
-      - main  
-  pull_request:
-    branches:
-      - main
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: aditya2004
-          MYSQL_DATABASE: calculations_db
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping --silent" --health-interval=10s --health-timeout=5s --health-retries=3
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -29,33 +12,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: '3.11'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi uvicorn pytest requests mysql-connector-python sqlalchemy selenium
+          pip install fastapi uvicorn pytest requests sqlalchemy
 
-      - name: Install Chrome & ChromeDriver
+      - name: Start FastAPI Server
         run: |
-          sudo apt update
-          sudo apt install -y google-chrome-stable
-          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
-          wget https://chromedriver.storage.googleapis.com/${CHROME_VERSION}.0.0/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          chmod +x /usr/local/bin/chromedriver
-
-      - name: Verify Chrome and ChromeDriver
-        run: |
-          google-chrome --version
-          chromedriver --version
-
-      - name: Wait for MySQL to be Ready
-        run: |
-          sleep 15  # Wait for MySQL to fully start
-          mysql -h 127.0.0.1 -u root -paditya2004 -e "SHOW DATABASES;"
+          uvicorn apiserver:app --host 127.0.0.1 --port 8000 &  
+          sleep 3  # Wait for the server to start
 
       - name: Run Tests
-        run: |
-          pytest test_api.py --disable-warnings
+        run: python test_api.py -v
