@@ -5,6 +5,20 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: aditya2004
+          MYSQL_DATABASE: calculations_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -17,12 +31,12 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi uvicorn pytest requests sqlalchemy
+          pip install fastapi uvicorn pytest requests sqlalchemy mysql-connector-python
 
       - name: Start FastAPI Server
         run: |
           uvicorn apiserver:app --host 127.0.0.1 --port 8000 &  
-          sleep 3  # Wait for the server to start
+          sleep 5  # Ensure the server has time to start
 
       - name: Run Tests
         run: python test_api.py -v
